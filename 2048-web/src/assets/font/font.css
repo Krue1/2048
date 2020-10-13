@@ -1,0 +1,34 @@
+@font-face {
+  font-family: 'PingFang-RB'; /* 重命名字体名 苹方-中粗 regular bold */
+  src: url('./PingFang/苹方黑体-中粗-简.ttf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'PingFang-RE'; /* 重命名字体名 苹方-准 regular */
+  src: url('./PingFang/苹方黑体-准-简.ttf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Montserrat-RE'; /* 重命名字体名 Montserrat-Medium */
+  src: url('./Montserrat/Montserrat-Medium.otf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Montserrat-BO'; /* 重命名字体名 Montserrat-Bold */
+  src: url('./Montserrat/Montserrat-Bold.otf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Montserrat-LI'; /* 重命名字体名 Montserrat-Light */
+  src: url('./Montserrat/Montserrat-Light.otf');
+  font-weight: normal;
+  font-style: normal;
+}

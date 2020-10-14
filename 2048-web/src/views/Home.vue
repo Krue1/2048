@@ -2,22 +2,31 @@
   <div class="home">
     <header>
       <h1>2048</h1>
-      <button @click="init">New Game</button>
+      <button @click="init" class="init-button">New Game</button>
       <p>
         Score: <span>{{ score }}</span>
       </p>
     </header>
 
     <div class="container">
+      <div class="mask" v-if="success">
+        <h1>You win!</h1>
+        <button @click="init" class="init-button">Try again</button>
+      </div>
+      <div class="mask" v-if="gameover">
+        <h1>Game over!</h1>
+        <button @click="init" class="init-button">Try again</button>
+      </div>
       <Background />
       <div class="number-cells">
-        <div
-          class="number-cell"
-          v-for="cell of numberCells"
-          :id="`c${cell.id}`"
-          :key="cell.id"
-          :style="
-            `
+        <transition-group name="appear">
+          <div
+            class="number-cell"
+            v-for="cell of numberCells"
+            :id="`c${cell.id}`"
+            :key="cell.id"
+            :style="
+              `
           width: 80px;
           height: 80px;
           border-radius: 5px;
@@ -27,38 +36,27 @@
           color: #776e65;
 
           position: absolute;
+          z-index: ${cell.num};
           backgroundColor: ${cell.color};
           top: ${getTop(cell)};
           left: ${getLeft(cell)};
           `
-          "
-        >
-          {{ cell.num }}
-        </div>
+            "
+          >
+            {{ cell.num }}
+          </div>
+        </transition-group>
       </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-$transitionTime: 0.2s;
+$transitionTime: 100ms;
 header {
   h1 {
     margin: 0;
     font-size: 32px;
-  }
-  button {
-    width: 100px;
-    padding: 8px;
-    background-color: #8f7a66;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    outline: none;
-    &:hover {
-      background-color: #9f8a77;
-    }
   }
   p {
     margin: 0;
@@ -69,27 +67,69 @@ header {
     }
   }
 }
+.init-button {
+  width: 110px;
+  padding: 10px;
+  background-color: #8f7a66;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  font-size: 16px;
+  font-weight: bold;
+  &:hover {
+    background-color: #9f8a77;
+  }
+}
 .container {
   width: 405px;
   height: 405px;
   margin: 20px auto;
   position: relative;
+  .mask {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 9999;
+    background: rgba(238, 228, 218, 0.5);
+    text-align: center;
+    h1 {
+      font-size: 60px;
+      font-weight: 700;
+      height: 60px;
+      line-height: 60px;
+      margin-top: 120px;
+      color: #776e65;
+    }
+    button {
+      margin-top: 30px;
+    }
+  }
   .number-cells {
     .number-cell {
       transition: $transitionTime top, $transitionTime left;
-      animation-fill-mode: backwards;
-      animation: appear 200ms ease-in-out;
+      // animation-fill-mode: backwards;
+      // animation: appear 200ms ease-in-out;
     }
   }
+}
+.appear-enter-active {
+  animation: appear 100ms ease-in-out;
+}
+.appear-leave-active {
+  transition: $transitionTime top, $transitionTime left;
 }
 @keyframes appear {
   0% {
     opacity: 0;
     transform: scale(0);
   }
-  80% {
+  50% {
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.5);
   }
   100% {
     opacity: 1;
@@ -125,27 +165,41 @@ export default {
         8192: '#281d04',
       },
       auxId: 0,
+      success: false,
+      gameover: false,
+      canMove: true,
     };
   },
   mounted() {
     this.init();
     document.addEventListener('keyup', (event) => {
+      if (!this.canMove) {
+        return;
+      }
       switch (event.key.toLocaleUpperCase()) {
         case 'ARROWUP':
         case 'W':
           this.moveUp();
+          this.success = this.isSuccess();
+          this.gameover = this.isGameOver();
           break;
         case 'ARROWDOWN':
         case 'S':
           this.moveDown();
+          this.success = this.isSuccess();
+          this.gameover = this.isGameOver();
           break;
         case 'ARROWLEFT':
         case 'A':
           this.moveLeft();
+          this.success = this.isSuccess();
+          this.gameover = this.isGameOver();
           break;
         case 'ARROWRIGHT':
         case 'D':
           this.moveRight();
+          this.success = this.isSuccess();
+          this.gameover = this.isGameOver();
           break;
       }
     });
@@ -155,6 +209,8 @@ export default {
       this.numberCells.length = 0;
       this.score = 0;
       this.auxId = 0;
+      this.success = false;
+      this.gameover = false;
       this.generateOneNumberCell();
       this.generateOneNumberCell();
     },
@@ -199,6 +255,20 @@ export default {
     getIndexById(id) {
       return this.numberCells.findIndex((cell) => cell.id === id);
     },
+    animateMerge(dom) {
+      dom.animate(
+        [
+          { transform: 'scale(0)' },
+          { transform: 'scale(1.2)' },
+          { transform: 'scale(1)' },
+        ],
+        {
+          duration: 150,
+        }
+      );
+      //合并后可以接受键盘输入
+      this.canMove = true;
+    },
     moveLeft() {
       //一个表示可以向左移动的变量
       let canMoveLeft = false;
@@ -222,16 +292,41 @@ export default {
             //如果当前数字格与上一数字格的数字一样，则合并
             //否则就是将其挪到上一格的后一列，条件是上一格的后一列不为当前格
             if (row[j].num === row[j - 1].num && !visited) {
+              //移动当前数字格的坐标到上一数字格上
               row[j].x = row[j - 1].x;
-              const newNum = row[j].num * 2;
-              row[j - 1].num = newNum;
-              row[j - 1].color = this.color[newNum];
-              this.numberCells.splice(this.getIndexById(row[j].id), 1);
-              row.splice(j, 1);
-              j--;
+              //滑动中禁止键盘输入
+              this.canMove = false;
+              //获取当前数字格的DOM
+              let dom1 = document.querySelector(`#c${row[j].id}`);
+              //给当前数字格一个监听器，在动画结束后再更新合并后的数字格
+              dom1.addEventListener(
+                'transitionend',
+                () => {
+                  const newNum = row[j].num * 2;
+                  row[j - 1].num = newNum;
+                  row[j - 1].color = this.color[newNum];
+                  let dom2 = document.querySelector(`#c${row[j - 1].id}`);
+                  this.animateMerge(dom2);
+                  this.numberCells.splice(this.getIndexById(row[j].id), 1);
+                  row.splice(j, 1);
+                  j--;
+                  this.score += newNum;
+                },
+                true
+              );
+              //若发生合并则表示当前可以向左移动，则表示这一格已进行合并，避免重复合并
               canMoveLeft = true;
               visited = true;
-              this.score += newNum;
+
+              // const newNum = row[j].num * 2;
+              // row[j - 1].num = newNum;
+              // row[j - 1].color = this.color[newNum];
+              // this.numberCells.splice(this.getIndexById(row[j].id), 1);
+              // row.splice(j, 1);
+              // j--;
+              // canMoveLeft = true;
+              // visited = true;
+              // this.score += newNum;
             } else {
               if (row[j].x !== row[j - 1].x + 1) {
                 row[j].x = row[j - 1].x + 1;
@@ -244,7 +339,6 @@ export default {
         }
       }
       if (canMoveLeft) {
-        // setTimeout(() => this.generateOneNumberCell(), 400);
         this.generateOneNumberCell();
       }
     },
@@ -272,26 +366,26 @@ export default {
             //否则就是将其挪到后一格的前一列，条件是后一格的前一列不为当前格
             if (row[j].num === row[j + 1].num && !visited) {
               row[j].x = row[j + 1].x;
-              const newNum = row[j].num * 2;
-              row[j + 1].num = newNum;
-              row[j + 1].color = this.color[newNum];
-              // let dom = document.querySelector(`#c${row[j + 1].id}`);
-              // dom.animate(
-              //   [
-              //     { transform: 'scale(0.95)' },
-              //     { transform: 'scale(1.3)' },
-              //     { transform: 'scale(1.03)' },
-              //     { transform: 'scale(1)' },
-              //   ],
-              //   {
-              //     duration: 200,
-              //   }
-              // );
-              this.numberCells.splice(this.getIndexById(row[j].id), 1);
-              row.splice(j, 1);
+              //滑动中禁止键盘输入
+              this.canMove = false;
+
+              let dom1 = document.querySelector(`#c${row[j].id}`);
+              dom1.addEventListener(
+                'transitionend',
+                () => {
+                  const newNum = row[j].num * 2;
+                  row[j + 1].num = newNum;
+                  row[j + 1].color = this.color[newNum];
+                  let dom2 = document.querySelector(`#c${row[j + 1].id}`);
+                  this.animateMerge(dom2);
+                  this.numberCells.splice(this.getIndexById(row[j].id), 1);
+                  row.splice(j, 1);
+                  this.score += newNum;
+                },
+                true
+              );
               canMoveRight = true;
               visited = true;
-              this.score += newNum;
             } else {
               if (row[j].x !== row[j + 1].x - 1) {
                 row[j].x = row[j + 1].x - 1;
@@ -304,7 +398,6 @@ export default {
         }
       }
       if (canMoveRight) {
-        // setTimeout(() => this.generateOneNumberCell(), 400);
         this.generateOneNumberCell();
       }
     },
@@ -332,15 +425,27 @@ export default {
             //否则就是将其挪到上一格的后一行，条件是上一格的后一行不为当前格
             if (column[j].num === column[j - 1].num && !visited) {
               column[j].y = column[j - 1].y;
-              const newNum = column[j].num * 2;
-              column[j - 1].num = newNum;
-              column[j - 1].color = this.color[newNum];
-              this.numberCells.splice(this.getIndexById(column[j].id), 1);
-              column.splice(j, 1);
-              j--;
+              //滑动中禁止键盘输入
+              this.canMove = false;
+
+              let dom1 = document.querySelector(`#c${column[j].id}`);
+              dom1.addEventListener(
+                'transitionend',
+                () => {
+                  const newNum = column[j].num * 2;
+                  column[j - 1].num = newNum;
+                  column[j - 1].color = this.color[newNum];
+                  let dom2 = document.querySelector(`#c${column[j - 1].id}`);
+                  this.animateMerge(dom2);
+                  this.numberCells.splice(this.getIndexById(column[j].id), 1);
+                  column.splice(j, 1);
+                  j--;
+                  this.score += newNum;
+                },
+                true
+              );
               canMoveUp = true;
               visited = true;
-              this.score += newNum;
             } else {
               if (column[j].y !== column[j - 1].y + 1) {
                 column[j].y = column[j - 1].y + 1;
@@ -353,7 +458,6 @@ export default {
         }
       }
       if (canMoveUp) {
-        // setTimeout(() => this.generateOneNumberCell(), 400);
         this.generateOneNumberCell();
       }
     },
@@ -381,14 +485,26 @@ export default {
             //否则就是将其挪到下一格的前一行，条件是下一格的前一行不为当前格
             if (column[j].num === column[j + 1].num && !visited) {
               column[j].y = column[j + 1].y;
-              const newNum = column[j].num * 2;
-              column[j + 1].num = newNum;
-              column[j + 1].color = this.color[newNum];
-              this.numberCells.splice(this.getIndexById(column[j].id), 1);
-              column.splice(j, 1);
+              //滑动中禁止键盘输入
+              this.canMove = false;
+
+              let dom1 = document.querySelector(`#c${column[j].id}`);
+              dom1.addEventListener(
+                'transitionend',
+                () => {
+                  const newNum = column[j].num * 2;
+                  column[j + 1].num = newNum;
+                  column[j + 1].color = this.color[newNum];
+                  let dom2 = document.querySelector(`#c${column[j + 1].id}`);
+                  this.animateMerge(dom2);
+                  this.numberCells.splice(this.getIndexById(column[j].id), 1);
+                  column.splice(j, 1);
+                  this.score += newNum;
+                },
+                true
+              );
               canMoveDown = true;
               visited = true;
-              this.score += newNum;
             } else {
               if (column[j].y !== column[j + 1].y - 1) {
                 column[j].y = column[j + 1].y - 1;
@@ -401,9 +517,41 @@ export default {
         }
       }
       if (canMoveDown) {
-        // setTimeout(() => this.generateOneNumberCell(), 400);
         this.generateOneNumberCell();
       }
+    },
+    isFull() {
+      return this.numberCells.length > 15;
+    },
+    isSuccess() {
+      return !!this.numberCells.find((cell) => cell.num === 8192);
+    },
+    isGameOver() {
+      //判断是否可以移动
+      //思路是看每个格子的右边或下边的格子是否与自己的数值相等
+      //因此第四行已经经过了第三行的比较，不用再向下比较
+      //第四列的已经经过第三列的比较，不用再向右比较
+      let cannotMove = () => {
+        for (let i = 0; i < 4; i++) {
+          let row = this.numberCells.filter((cell) => cell.y === i);
+          for (let j = 0; j < 4; j++) {
+            //除第四行外，所有格子跟下一行同一列的格子比较数值是否相等
+            if (i < 3) {
+              if (row[j].num === this.getCellByPoint({ x: j, y: i + 1 }).num) {
+                return false;
+              }
+            }
+            //除第四列外，所有格子跟同一行下一列的格子比较数值是否相等
+            if (j < 3) {
+              if (row[j].num === row[j + 1].num) {
+                return false;
+              }
+            }
+          }
+        }
+        return true;
+      };
+      return this.isFull() && cannotMove();
     },
   },
 };

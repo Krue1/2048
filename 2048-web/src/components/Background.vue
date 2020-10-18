@@ -20,7 +20,6 @@ export default {};
   grid-column-gap: 15px;
   grid-template-columns: repeat(4, 80px);
   grid-template-rows: repeat(4, 80px);
-  // position: absolute;
 
   .grid-cell {
     width: 80px;

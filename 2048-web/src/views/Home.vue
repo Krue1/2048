@@ -215,6 +215,9 @@ export default {
       this.generateOneNumberCell();
     },
     generateOneNumberCell() {
+      if (this.isFull()) {
+        return;
+      }
       const num = this.random24();
       const newCell = {
         x: this.random0123(),
@@ -533,7 +536,9 @@ export default {
       //第四列的已经经过第三列的比较，不用再向右比较
       let cannotMove = () => {
         for (let i = 0; i < 4; i++) {
-          let row = this.numberCells.filter((cell) => cell.y === i);
+          let row = this.numberCells
+            .filter((cell) => cell.y === i)
+            .sort(this.sortByX);
           for (let j = 0; j < 4; j++) {
             //除第四行外，所有格子跟下一行同一列的格子比较数值是否相等
             if (i < 3) {
